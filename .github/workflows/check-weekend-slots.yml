@@ -1,0 +1,40 @@
+name: Check Weekend Volunteer Slots
+
+on:
+  schedule:
+    # Runs every morning at 8:00 AM UTC (adjust timezone as needed)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  check-slots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run intercept script
+        run: node intercept.js
+
+      - name: Upload artifacts (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-output-${{ github.run_number }}
+          path: |
+            *.log
+            *.json
+          retention-days: 7
