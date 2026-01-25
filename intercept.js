@@ -1,8 +1,11 @@
 const { chromium } = require('playwright');
+const fs = require('fs');
 
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
+
+  let foundSlots = [];
 
   page.on('response', async (response) => {
     const url = response.url();
@@ -35,6 +38,14 @@ const { chromium } = require('playwright');
               const dayName = date.getDay() === 0 ? 'Sunday' : 'Saturday';
               console.log(`  - ${dayName}, ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`);
               console.log(`    ${JSON.stringify(slot, null, 2)}`);
+
+              // Save to foundSlots array
+              foundSlots.push({
+                day: dayName,
+                date: date.toLocaleDateString(),
+                time: date.toLocaleTimeString(),
+                slot: slot
+              });
             });
           } else {
             console.log('\n❌ No available weekend slots found');
@@ -51,4 +62,17 @@ const { chromium } = require('playwright');
   });
 
   await browser.close();
+
+  // Save results to file
+  const results = {
+    timestamp: new Date().toISOString(),
+    slotsFound: foundSlots.length,
+    slots: foundSlots
+  };
+
+  fs.writeFileSync('results.json', JSON.stringify(results, null, 2));
+  console.log(`\n📝 Results saved to results.json (${foundSlots.length} slots found)`);
+
+  // Exit with code 1 if slots found (to trigger notification), 0 if none
+  process.exit(foundSlots.length > 0 ? 1 : 0);
 })();

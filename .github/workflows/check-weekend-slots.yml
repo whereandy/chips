@@ -2,8 +2,8 @@ name: Check Weekend Volunteer Slots
 
 on:
   schedule:
-    # Runs every morning at 8:00 AM UTC (adjust timezone as needed)
-    - cron: '0 8 * * *'
+    # Runs every hour at the top of the hour
+    - cron: '0 * * * *'
   workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
@@ -27,7 +27,44 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run intercept script
+        id: check
+        continue-on-error: true
         run: node intercept.js
+
+      - name: Read results
+        if: steps.check.outcome == 'failure'
+        id: results
+        run: |
+          if [ -f results.json ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "results<<EOF" >> $GITHUB_OUTPUT
+            cat results.json >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Issue for notification
+        if: steps.results.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = ${{ steps.results.outputs.results }};
+
+            // Format slot details
+            let slotsText = '';
+            if (results.slots && results.slots.length > 0) {
+              slotsText = results.slots.map(slot =>
+                `- **${slot.day}, ${slot.date}** at ${slot.time}`
+              ).join('\n');
+            }
+
+            // Create issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🎯 Weekend Volunteer Slots Available!',
+              body: `Weekend volunteer slots have been found!\n\n## Available Slots:\n${slotsText}\n\n## Details\n- Found at: ${results.timestamp}\n- Total slots: ${results.slotsFound}\n\n[View full run details](${context.payload.repository.html_url}/actions/runs/${context.runId})\n\n---\n*This issue was automatically created by the slot checker workflow.*`,
+              labels: ['volunteer-slots', 'automated']
+            });
 
       - name: Upload artifacts (optional)
         if: always()
