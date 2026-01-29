@@ -2,8 +2,8 @@ name: Check Weekend Volunteer Slots
 
 on:
   schedule:
-    # Runs every hour at the top of the hour
-    - cron: '0 * * * *'
+    # Runs daily at 9:00 AM UTC (4:00 AM EST / 1:00 AM PST)
+    - cron: '0 9 * * *'
   workflow_dispatch: # Allows manual triggering from GitHub UI
   repository_dispatch: # Allows external services to trigger this workflow
     types: [check-slots]
