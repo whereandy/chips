@@ -10,6 +10,7 @@ on:
 
 jobs:
   check-slots:
+    if: false # Workflow disabled
     runs-on: ubuntu-latest
 
     steps:
